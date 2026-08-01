@@ -1,0 +1,8 @@
+{
+  "name": "Barcode Generator v.1.1.0",
+  "description": "A clean, responsive barcode generator supporting multiple formats, custom styling, and SVG/PNG download.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
