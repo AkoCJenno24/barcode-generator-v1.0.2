@@ -32,6 +32,8 @@ export interface SupabasePriceUpdateRow {
   new_mrp?: string | number;
   old_unit_cost?: string | number;
   new_unit_cost?: string | number;
+  is_vatted?: boolean;
+  old_is_vatted?: boolean;
   created_at?: string;
   user_id?: string;
 }
@@ -53,6 +55,30 @@ function prepareUnitCostForDb(val: string | number | undefined | null): number |
   if (!str) return null;
   const num = cleanNumericForDb(str);
   return num !== null ? num : str;
+}
+
+function parseBooleanDbValue(val: any): boolean {
+  if (val === undefined || val === null) return false;
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'number') return val !== 0;
+  if (typeof val === 'string') {
+    const lower = val.trim().toLowerCase();
+    if (lower === 'true' || lower === 't' || lower === '1' || lower === 'yes') return true;
+    if (lower === 'false' || lower === 'f' || lower === '0' || lower === 'no') return false;
+  }
+  return Boolean(val);
+}
+
+function parseOptionalBooleanDbValue(val: any): boolean | undefined {
+  if (val === undefined || val === null) return undefined;
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'number') return val !== 0;
+  if (typeof val === 'string') {
+    const lower = val.trim().toLowerCase();
+    if (lower === 'true' || lower === 't' || lower === '1' || lower === 'yes') return true;
+    if (lower === 'false' || lower === 'f' || lower === '0' || lower === 'no') return false;
+  }
+  return Boolean(val);
 }
 
 export interface SupabaseSavedBarcodeRow {
@@ -261,7 +287,10 @@ export async function fetchPriceUpdatesByDateRange(
       newMrp: row.new_mrp !== undefined && row.new_mrp !== null ? formatPriceWithDecimals(row.new_mrp) : '0 SAR',
       oldUnitCost: row.old_unit_cost !== undefined && row.old_unit_cost !== null ? String(row.old_unit_cost) : '',
       newUnitCost: row.new_unit_cost !== undefined && row.new_unit_cost !== null ? String(row.new_unit_cost) : '',
+      isVatted: parseOptionalBooleanDbValue(row.is_vatted),
+      oldIsVatted: parseOptionalBooleanDbValue(row.old_is_vatted),
       createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+      rawCreatedAt: row.created_at ? String(row.created_at) : undefined,
     }));
 
     return { data: updates, error: null };
@@ -277,7 +306,9 @@ export async function insertPriceUpdateToSupabase(
   oldMrp: string,
   newMrp: string,
   oldUnitCost?: string,
-  newUnitCost?: string
+  newUnitCost?: string,
+  isVatted?: boolean,
+  oldIsVatted?: boolean
 ): Promise<{ success: boolean; error: string | null }> {
   try {
     const oldMrpNum = cleanNumericForDb(oldMrp);
@@ -290,39 +321,106 @@ export async function insertPriceUpdateToSupabase(
       new_mrp: newMrpNum !== null ? newMrpNum : newMrp,
       old_unit_cost: prepareUnitCostForDb(oldUnitCost),
       new_unit_cost: prepareUnitCostForDb(newUnitCost),
+      is_vatted: isVatted !== undefined ? Boolean(isVatted) : null,
+      old_is_vatted: oldIsVatted !== undefined ? Boolean(oldIsVatted) : null,
       created_at: new Date().toISOString(),
     };
 
+    // Stage 1: Try full insert with old_is_vatted
     let { error } = await supabase.from('price_update').insert([row]);
+    if (!error) return { success: true, error: null };
 
-    if (error) {
-      // Fallback with raw strings or stripped unit_cost if column doesn't exist
-      const errLower = error.message.toLowerCase();
-      const fallbackRow: Record<string, any> = {
-        item_code: itemCode,
-        item_name: itemName,
-        old_mrp: formatPriceWithDecimals(oldMrp),
-        new_mrp: formatPriceWithDecimals(newMrp),
-        created_at: new Date().toISOString(),
-      };
+    const err1 = error.message.toLowerCase();
 
-      if (!errLower.includes('old_unit_cost') && !errLower.includes('unit_cost')) {
-        fallbackRow.old_unit_cost = oldUnitCost ? String(oldUnitCost).trim() : null;
-        fallbackRow.new_unit_cost = newUnitCost ? String(newUnitCost).trim() : null;
+    // Stage 2: If old_is_vatted column does not exist in price_update table, remove old_is_vatted and retry (keeping is_vatted!)
+    if (err1.includes('old_is_vatted')) {
+      delete row.old_is_vatted;
+      const res2 = await supabase.from('price_update').insert([row]);
+      if (!res2.error) return { success: true, error: null };
+      error = res2.error;
+    }
+
+    // Stage 3: Fallback with simplified types/unitCost, ensuring is_vatted is PRESERVED if column exists
+    const err2 = error.message.toLowerCase();
+    const fallbackRow: Record<string, any> = {
+      item_code: itemCode,
+      item_name: itemName,
+      old_mrp: formatPriceWithDecimals(oldMrp),
+      new_mrp: formatPriceWithDecimals(newMrp),
+      created_at: new Date().toISOString(),
+    };
+
+    if (isVatted !== undefined) {
+      fallbackRow.is_vatted = Boolean(isVatted);
+    }
+
+    if (!err2.includes('unit_cost')) {
+      fallbackRow.old_unit_cost = oldUnitCost ? String(oldUnitCost).trim() : null;
+      fallbackRow.new_unit_cost = newUnitCost ? String(newUnitCost).trim() : null;
+    }
+
+    const res3 = await supabase.from('price_update').insert([fallbackRow]);
+    if (!res3.error) return { success: true, error: null };
+
+    // Stage 4: If is_vatted column itself does not exist in table, remove as last resort
+    delete fallbackRow.is_vatted;
+    delete fallbackRow.old_unit_cost;
+    delete fallbackRow.new_unit_cost;
+    const res4 = await supabase.from('price_update').insert([fallbackRow]);
+    if (!res4.error) return { success: true, error: null };
+
+    return { success: false, error: res4.error.message };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+export async function deletePriceUpdateFromSupabase(
+  id?: string,
+  itemCode?: string,
+  rawCreatedAt?: string
+): Promise<{ success: boolean; error: string | null }> {
+  try {
+    let lastError: string | null = null;
+
+    // 1. Primary deletion by ID if valid and not a fallback client string
+    if (id && !id.startsWith('pu_')) {
+      const numId = Number(id);
+      if (!isNaN(numId)) {
+        const { error } = await supabase.from('price_update').delete().eq('id', numId);
+        if (!error) return { success: true, error: null };
+        lastError = error.message;
       }
 
-      const retryRes = await supabase.from('price_update').insert([fallbackRow]);
-      if (retryRes.error) {
-        delete fallbackRow.old_unit_cost;
-        delete fallbackRow.new_unit_cost;
-        const finalRetry = await supabase.from('price_update').insert([fallbackRow]);
-        if (finalRetry.error) {
-          return { success: false, error: error.message };
-        }
+      const { error: strErr } = await supabase.from('price_update').delete().eq('id', id);
+      if (!strErr) return { success: true, error: null };
+      lastError = strErr.message;
+    }
+
+    // 2. Secondary fallback deletion by item_code (+ rawCreatedAt if available)
+    if (itemCode) {
+      let query = supabase.from('price_update').delete().eq('item_code', itemCode);
+      if (rawCreatedAt) {
+        query = query.eq('created_at', rawCreatedAt);
+      }
+      const { error: fbErr } = await query;
+      if (!fbErr) return { success: true, error: null };
+      
+      // Try again without created_at filter if created_at didn't match
+      if (rawCreatedAt) {
+        const { error: codeOnlyErr } = await supabase
+          .from('price_update')
+          .delete()
+          .eq('item_code', itemCode);
+        if (!codeOnlyErr) return { success: true, error: null };
+        lastError = codeOnlyErr.message;
+      } else {
+        lastError = fbErr.message;
       }
     }
 
-    return { success: true, error: null };
+    return { success: false, error: lastError || 'Failed to delete price update line' };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, error: msg };

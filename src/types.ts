@@ -91,7 +91,10 @@ export interface PriceUpdateItem {
   newMrp: string;
   oldUnitCost?: string;
   newUnitCost?: string;
+  isVatted?: boolean;
+  oldIsVatted?: boolean;
   createdAt?: number;
+  rawCreatedAt?: string;
 }
 
 export interface LabelSheetSettings {

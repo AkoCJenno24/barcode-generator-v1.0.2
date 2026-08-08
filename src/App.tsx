@@ -13,7 +13,7 @@ import { ToastNotification, ToastData } from './components/ToastNotification';
 import { DEFAULT_CATALOG_ITEMS } from './data/catalog';
 import { formatPriceWithDecimals, triggerPopupPrint } from './utils/barcodeUtils';
 import { detectLocalPrinter, applyPrinterPreset } from './utils/printerUtils';
-import { BarcodeOptions, BarcodeHistoryItem, CatalogItem } from './types';
+import { BarcodeOptions, BarcodeHistoryItem, CatalogItem, PriceUpdateItem } from './types';
 import {
   fetchCatalogItemsFromSupabase,
   insertCatalogItemToSupabase,
@@ -21,6 +21,7 @@ import {
   deleteCatalogItemFromSupabase,
   fetchSavedBarcodesFromSupabase,
   insertPriceUpdateToSupabase,
+  deletePriceUpdateFromSupabase,
 } from './lib/supabaseService';
 
 const CATALOG_STORAGE_KEY = 'barcode_studio_catalog_v1';
@@ -218,7 +219,7 @@ export default function App() {
       }
     }
 
-    // Check if price, MRP, or Unit Cost was updated to record in price_update table
+    // Check if price, MRP, Unit Cost, or IsVatted was updated to record in price_update table
     const oldItem = catalogItems.find((item) => item.id === id);
     if (oldItem) {
       const oldMrpRaw = oldItem.mrp || oldItem.price;
@@ -230,14 +231,23 @@ export default function App() {
       const oldUnitCost = oldItem.unitCost || '';
       const newUnitCost = dataToSave.unitCost !== undefined ? dataToSave.unitCost : oldUnitCost;
 
-      if (formattedOldMrp !== formattedNewMrp || oldUnitCost !== newUnitCost) {
+      const oldIsVatted = Boolean(oldItem.isVatted);
+      const newIsVatted = dataToSave.isVatted !== undefined ? Boolean(dataToSave.isVatted) : oldIsVatted;
+
+      if (
+        formattedOldMrp !== formattedNewMrp ||
+        oldUnitCost !== newUnitCost ||
+        oldIsVatted !== newIsVatted
+      ) {
         insertPriceUpdateToSupabase(
           dataToSave.itemCode || oldItem.itemCode,
           dataToSave.itemName || oldItem.itemName,
           formattedOldMrp,
           formattedNewMrp,
           oldUnitCost,
-          newUnitCost
+          newUnitCost,
+          newIsVatted,
+          oldIsVatted
         ).catch((err) => console.warn('Could not record price update to Supabase:', err));
       }
     }
@@ -277,6 +287,97 @@ export default function App() {
         : `Item code ${dataToSave.itemCode || id} updated directly in Supabase catalog_items!`,
       type: error ? 'warning' : 'info',
     });
+  };
+
+  const handleRevertPriceUpdate = async (priceUpdate: PriceUpdateItem): Promise<{ success: boolean; error: string | null }> => {
+    // 1. Delete record from price_update table in Supabase
+    const deleteRes = await deletePriceUpdateFromSupabase(
+      priceUpdate.id,
+      priceUpdate.itemCode,
+      priceUpdate.rawCreatedAt
+    );
+    if (!deleteRes.success) {
+      console.warn('Failed to delete price update record from Supabase:', deleteRes.error);
+    }
+
+    // 2. Find matching catalog item by itemCode (check local memory first, then fetch from Supabase if needed)
+    let matchingItem = catalogItems.find(
+      (item) => item.itemCode.trim().toLowerCase() === priceUpdate.itemCode.trim().toLowerCase()
+    );
+
+    if (!matchingItem) {
+      const { data: cloudItems } = await fetchCatalogItemsFromSupabase();
+      if (cloudItems && cloudItems.length > 0) {
+        matchingItem = cloudItems.find(
+          (item) => item.itemCode.trim().toLowerCase() === priceUpdate.itemCode.trim().toLowerCase()
+        );
+      }
+    }
+
+    if (matchingItem) {
+      const revertedMrp = priceUpdate.oldMrp ? formatPriceWithDecimals(priceUpdate.oldMrp) : matchingItem.mrp;
+      const revertedUnitCost = priceUpdate.oldUnitCost !== undefined && priceUpdate.oldUnitCost !== ''
+        ? priceUpdate.oldUnitCost
+        : matchingItem.unitCost;
+      const revertedIsVatted = priceUpdate.oldIsVatted !== undefined
+        ? priceUpdate.oldIsVatted
+        : (priceUpdate.isVatted !== undefined ? !priceUpdate.isVatted : matchingItem.isVatted);
+
+      const revertedData: Partial<CatalogItem> = {
+        mrp: revertedMrp,
+        price: revertedMrp,
+        unitCost: revertedUnitCost,
+        isVatted: revertedIsVatted,
+      };
+
+      const { data: updatedCloudItem, error } = await updateCatalogItemInSupabase(matchingItem.id, revertedData);
+
+      const mergedReverted = {
+        ...revertedData,
+        ...(updatedCloudItem || {}),
+      };
+
+      setCatalogItems((prev) => {
+        const exists = prev.some((ci) => ci.id === matchingItem.id);
+        if (exists) {
+          return prev.map((ci) => (ci.id === matchingItem.id ? { ...ci, ...mergedReverted } : ci));
+        } else {
+          return [...prev, { ...matchingItem, ...mergedReverted }];
+        }
+      });
+
+      if (selectedItem && selectedItem.id === matchingItem.id) {
+        const updatedSelected = { ...selectedItem, ...mergedReverted };
+        setSelectedItem(updatedSelected);
+
+        const cleanBatch = itemBatch.trim();
+        setOptions((prev) => ({
+          ...prev,
+          text: cleanBatch ? `${updatedSelected.itemCode}.${cleanBatch}` : updatedSelected.itemCode,
+          itemCode: updatedSelected.itemCode,
+          itemName: updatedSelected.itemName,
+          price: formatPriceWithDecimals(updatedSelected.price),
+          batch: cleanBatch,
+        }));
+      }
+
+      setToast({
+        id: Date.now(),
+        type: 'success',
+        title: 'Price Update Reverted',
+        message: `Catalog item '${priceUpdate.itemCode}' reverted in catalog & database! (MRP: ${revertedMrp}, Unit Cost: ${revertedUnitCost || '0'}, Vatted: ${revertedIsVatted ? 'Yes' : 'No'}).`,
+      });
+
+      return { success: true, error: error };
+    } else {
+      setToast({
+        id: Date.now(),
+        type: 'info',
+        title: 'Price Update Line Deleted',
+        message: `Price update record deleted. Item '${priceUpdate.itemCode}' was not found in catalog.`,
+      });
+      return { success: true, error: null };
+    }
   };
 
   const handleDeleteCatalogItem = async (id: string) => {
@@ -503,6 +604,7 @@ export default function App() {
         onClose={() => setIsReportsOpen(false)}
         catalogItems={catalogItems}
         defaultReportTab={activeReportTab}
+        onDeletePriceUpdate={handleRevertPriceUpdate}
       />
 
       {/* Floating Notification Toast */}
