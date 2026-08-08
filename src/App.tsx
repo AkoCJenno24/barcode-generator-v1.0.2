@@ -34,7 +34,7 @@ const DEFAULT_OPTIONS: BarcodeOptions = {
   format: 'CODE128',
   lineColor: '#000000',
   background: '#ffffff',
-  width: 1.6,
+  width: 2,
   height: 100,
   displayValue: false,
   font: 'serif',

@@ -746,11 +746,13 @@ export const BarcodeControls: React.FC<BarcodeControlsProps> = ({
               )}
             </div>
 
-            {/* Bar Width */}
+            {/* Barcode Width */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-slate-700">
-                <label htmlFor="bar-width-slider" className="font-semibold">Bar Thickness</label>
-                <span className="font-mono text-slate-500">{options.width} px</span>
+                <label htmlFor="bar-width-slider" className="font-semibold">Barcode Width</label>
+                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  {options.width}x
+                </span>
               </div>
               <input
                 id="bar-width-slider"
@@ -762,6 +764,32 @@ export const BarcodeControls: React.FC<BarcodeControlsProps> = ({
                 onChange={(e) => updateOption('width', parseFloat(e.target.value))}
                 className="w-full accent-slate-900 cursor-pointer"
               />
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <span className="text-[10px] text-slate-400 font-medium">Presets:</span>
+                {[
+                  { label: '1x', val: 1 },
+                  { label: '1.5x', val: 1.5 },
+                  { label: '2x (Default)', val: 2 },
+                  { label: '2.5x', val: 2.5 },
+                  { label: '3x', val: 3 },
+                ].map((preset) => {
+                  const isActive = options.width === preset.val;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => updateOption('width', preset.val)}
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Height */}
