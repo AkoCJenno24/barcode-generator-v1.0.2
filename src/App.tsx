@@ -30,10 +30,10 @@ const INITIAL_BATCH = 'R1456';
 
 const DEFAULT_OPTIONS: BarcodeOptions = {
   text: `${INITIAL_ITEM.itemCode}.${INITIAL_BATCH}`,
-  format: 'CODE128',
+  format: 'CODE39',
   lineColor: '#000000',
   background: '#ffffff',
-  width: 2,
+  width: 1.8,
   height: 100,
   displayValue: false,
   font: 'serif',
@@ -55,6 +55,7 @@ const DEFAULT_OPTIONS: BarcodeOptions = {
   activeFrameWidthInches: 1.90,
   activeFrameHeightInches: 0.90,
   wasfatyType: 'Non-Wasfaty',
+  narrowWideRatio: 3,
 };
 
 export default function App() {
@@ -123,7 +124,7 @@ export default function App() {
             itemCode: firstItem.itemCode,
             itemName: firstItem.itemName,
             price: firstItem.price,
-            format: firstItem.format || prev.format || 'CODE128',
+            format: firstItem.format || prev.format || 'CODE39',
           }));
         }
       } catch (err) {
@@ -160,7 +161,7 @@ export default function App() {
       isDeactivated: newItemData.isDeactivated,
       category: newItemData.category || 'General',
       afterDiscount: newItemData.afterDiscount,
-      format: newItemData.format || 'CODE128',
+      format: newItemData.format || 'CODE39',
     });
 
     const newItem: CatalogItem = createdCloudItem || {
@@ -308,7 +309,7 @@ export default function App() {
       itemCode: firstItem.itemCode,
       itemName: firstItem.itemName,
       price: firstItem.price,
-      format: firstItem.format || prev.format || 'CODE128',
+      format: firstItem.format || prev.format || 'CODE39',
     }));
     setToast({
       id: Date.now(),

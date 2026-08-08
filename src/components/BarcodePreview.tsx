@@ -110,6 +110,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
           textMargin: options.textMargin,
           margin: options.margin,
           flat: options.flat,
+          narrowWideRatio: options.narrowWideRatio || 3,
           valid: (valid: boolean) => {
             if (!valid) {
               setRenderError(`Value "${options.text}" is not valid for ${options.format} format.`);
@@ -117,7 +118,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
               setRenderError(null);
             }
           },
-        });
+        } as any);
       } else {
         renderRetailLabelSvg(svgElement, options);
       }

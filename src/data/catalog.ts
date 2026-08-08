@@ -7,7 +7,7 @@ export const DEFAULT_CATALOG_ITEMS: CatalogItem[] = [
     itemName: 'Ball point pen',
     price: '5.00 SAR',
     category: 'Stationery',
-    format: 'CODE128',
+    format: 'CODE39',
     createdAt: Date.now() - 500000,
   },
   {
@@ -16,7 +16,7 @@ export const DEFAULT_CATALOG_ITEMS: CatalogItem[] = [
     itemName: 'A4 Copy Paper (500 sheets)',
     price: '25.00 SAR',
     category: 'Stationery',
-    format: 'CODE128',
+    format: 'CODE39',
     createdAt: Date.now() - 400000,
   },
   {
@@ -25,7 +25,7 @@ export const DEFAULT_CATALOG_ITEMS: CatalogItem[] = [
     itemName: 'Stainless Steel Ruler 30cm',
     price: '12.00 SAR',
     category: 'Tools',
-    format: 'CODE128',
+    format: 'CODE39',
     createdAt: Date.now() - 300000,
   },
   {
@@ -34,7 +34,7 @@ export const DEFAULT_CATALOG_ITEMS: CatalogItem[] = [
     itemName: 'Sticky Notes Yellow 3x3',
     price: '4.00 SAR',
     category: 'Office',
-    format: 'CODE128',
+    format: 'CODE39',
     createdAt: Date.now() - 200000,
   },
   {
@@ -43,7 +43,7 @@ export const DEFAULT_CATALOG_ITEMS: CatalogItem[] = [
     itemName: 'Ergonomic Wireless Mouse',
     price: '65.00 SAR',
     category: 'Electronics',
-    format: 'CODE128',
+    format: 'CODE39',
     createdAt: Date.now() - 100000,
   },
 ];

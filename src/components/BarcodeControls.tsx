@@ -759,7 +759,7 @@ export const BarcodeControls: React.FC<BarcodeControlsProps> = ({
                 type="range"
                 min="1"
                 max="4"
-                step="0.5"
+                step="0.1"
                 value={options.width}
                 onChange={(e) => updateOption('width', parseFloat(e.target.value))}
                 className="w-full accent-slate-900 cursor-pointer"
@@ -769,9 +769,9 @@ export const BarcodeControls: React.FC<BarcodeControlsProps> = ({
                 {[
                   { label: '1x', val: 1 },
                   { label: '1.5x', val: 1.5 },
-                  { label: '2x (Default)', val: 2 },
+                  { label: '1.8x (Default)', val: 1.8 },
+                  { label: '2x', val: 2 },
                   { label: '2.5x', val: 2.5 },
-                  { label: '3x', val: 3 },
                 ].map((preset) => {
                   const isActive = options.width === preset.val;
                   return (
@@ -779,6 +779,55 @@ export const BarcodeControls: React.FC<BarcodeControlsProps> = ({
                       key={preset.label}
                       type="button"
                       onClick={() => updateOption('width', preset.val)}
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Narrow to Wide Bar Ratio */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between text-slate-700">
+                <label htmlFor="ratio-slider" className="font-semibold flex items-center gap-1.5">
+                  <span>Narrow to Wide Ratio</span>
+                  <span className="text-[10px] text-slate-400 font-normal">(Code 39)</span>
+                </label>
+                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  {options.narrowWideRatio || 3}:1
+                </span>
+              </div>
+              <input
+                id="ratio-slider"
+                type="range"
+                min="2"
+                max="4"
+                step="0.5"
+                value={options.narrowWideRatio || 3}
+                onChange={(e) => updateOption('narrowWideRatio', parseFloat(e.target.value))}
+                className="w-full accent-slate-900 cursor-pointer"
+              />
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <span className="text-[10px] text-slate-400 font-medium">Presets:</span>
+                {[
+                  { label: '2:1', val: 2 },
+                  { label: '2.5:1', val: 2.5 },
+                  { label: '3:1 (Default)', val: 3 },
+                  { label: '3.5:1', val: 3.5 },
+                ].map((preset) => {
+                  const currentRatio = options.narrowWideRatio || 3;
+                  const isActive = currentRatio === preset.val;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => updateOption('narrowWideRatio', preset.val)}
                       className={`text-[10px] font-semibold px-2 py-0.5 rounded transition-all cursor-pointer ${
                         isActive
                           ? 'bg-slate-900 text-white shadow-xs'

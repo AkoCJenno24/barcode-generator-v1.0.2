@@ -275,7 +275,8 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
     height: Math.min(options.height, 55),
     displayValue: false,
     margin: 0,
-  });
+    narrowWideRatio: options.narrowWideRatio || 3,
+  } as any);
 
   const rawBarWidth = parseFloat(hiddenSvg.getAttribute('width') || '220');
   const rawBarHeight = parseFloat(hiddenSvg.getAttribute('height') || '50');
@@ -575,7 +576,8 @@ export function triggerPopupPrint(
         font: options.font,
         fontSize: 11,
         margin: 2,
-      });
+        narrowWideRatio: options.narrowWideRatio || 3,
+      } as any);
     } else {
       renderRetailLabelSvg(svgEl, {
         ...options,

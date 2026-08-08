@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS public.catalog_items (
   mrp TEXT DEFAULT '',
   is_vatted BOOLEAN DEFAULT false,
   category TEXT DEFAULT 'General',
-  format TEXT DEFAULT 'CODE128',
+  format TEXT DEFAULT 'CODE39',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
 );
@@ -268,7 +268,7 @@ export const SupabaseSyncModal: React.FC<SupabaseSyncModalProps> = ({
       itemName: newItemName.trim(),
       price: newPrice.trim(),
       category: newCategory.trim() || 'Pharmacy',
-      format: 'CODE128',
+      format: 'CODE39',
       isVatted: true,
     });
     setIsSubmittingItem(false);

@@ -41,6 +41,7 @@ export interface BarcodeOptions {
   fontWeight?: 'normal' | 'bold' | '900';
   letterSpacing?: number;
   wasfatyType?: 'Wasfaty' | 'Non-Wasfaty';
+  narrowWideRatio?: number; // Ratio of wide bars to narrow bars (default: 3)
   printerPresetId?: string;
   printerWidthInches?: number;
   printerHeightInches?: number;

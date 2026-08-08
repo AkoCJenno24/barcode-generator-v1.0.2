@@ -175,7 +175,7 @@ export async function fetchCatalogItemsFromSupabase(): Promise<{
         isDeactivated: Boolean(row.is_deactivated),
         category: row.category ? String(row.category) : 'General',
         afterDiscount: row.after_discount !== undefined && row.after_discount !== null && String(row.after_discount).trim() !== '' ? formatPriceWithDecimals(row.after_discount) : undefined,
-        format: (row.format || 'CODE128') as CatalogItem['format'],
+        format: (row.format || 'CODE39') as CatalogItem['format'],
         createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
       });
     });
@@ -220,7 +220,7 @@ export async function fetchCreatedItemsByDateRange(
       isDeactivated: Boolean(row.is_deactivated),
       category: row.category ? String(row.category) : 'General',
       afterDiscount: row.after_discount !== undefined && row.after_discount !== null && String(row.after_discount).trim() !== '' ? formatPriceWithDecimals(row.after_discount) : undefined,
-      format: (row.format || 'CODE128') as CatalogItem['format'],
+      format: (row.format || 'CODE39') as CatalogItem['format'],
       createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
     }));
 
@@ -350,7 +350,7 @@ export async function insertCatalogItemToSupabase(
       is_deactivated: Boolean(item.isDeactivated),
       category: item.category || 'General',
       after_discount: afterDiscountVal !== null ? afterDiscountVal : (item.afterDiscount?.trim() || null),
-      format: item.format || 'CODE128',
+      format: item.format || 'CODE39',
       created_at: new Date().toISOString(),
     };
 
@@ -398,7 +398,7 @@ export async function insertCatalogItemToSupabase(
       afterDiscount: data.after_discount !== undefined && data.after_discount !== null && String(data.after_discount).trim() !== ''
         ? formatPriceWithDecimals(data.after_discount)
         : (item.afterDiscount || undefined),
-      format: (data.format || item.format || 'CODE128') as CatalogItem['format'],
+      format: (data.format || item.format || 'CODE39') as CatalogItem['format'],
       createdAt: data.created_at ? new Date(data.created_at).getTime() : Date.now(),
     };
 
@@ -481,7 +481,7 @@ export async function updateCatalogItemInSupabase(
       afterDiscount: data.after_discount !== undefined && data.after_discount !== null && String(data.after_discount).trim() !== ''
         ? formatPriceWithDecimals(data.after_discount)
         : (updates.afterDiscount && String(updates.afterDiscount).trim() !== '' ? formatPriceWithDecimals(updates.afterDiscount) : undefined),
-      format: (data.format || updates.format || 'CODE128') as CatalogItem['format'],
+      format: (data.format || updates.format || 'CODE39') as CatalogItem['format'],
       createdAt: data.created_at ? new Date(data.created_at).getTime() : Date.now(),
     };
 
