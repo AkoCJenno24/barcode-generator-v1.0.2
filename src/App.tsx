@@ -3,7 +3,6 @@ import { Barcode, Loader2 } from 'lucide-react';
 import { Header } from './components/Header';
 import { BarcodePreview } from './components/BarcodePreview';
 import { BarcodeControls } from './components/BarcodeControls';
-import { PrintSheetModal } from './components/PrintSheetModal';
 import { BatchModal } from './components/BatchModal';
 import { HistoryDrawer } from './components/HistoryDrawer';
 import { CatalogModal } from './components/CatalogModal';
@@ -11,7 +10,7 @@ import { SupabaseSyncModal } from './components/SupabaseSyncModal';
 import { ReportsModal, ReportType } from './components/ReportsModal';
 import { ToastNotification, ToastData } from './components/ToastNotification';
 import { DEFAULT_CATALOG_ITEMS } from './data/catalog';
-import { formatPriceWithDecimals } from './utils/barcodeUtils';
+import { formatPriceWithDecimals, triggerPopupPrint } from './utils/barcodeUtils';
 import { detectLocalPrinter, applyPrinterPreset } from './utils/printerUtils';
 import { BarcodeOptions, BarcodeHistoryItem, CatalogItem } from './types';
 import {
@@ -67,7 +66,6 @@ export default function App() {
   const [toast, setToast] = useState<ToastData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const [isPrintSheetOpen, setIsPrintSheetOpen] = useState(false);
   const [isBatchOpen, setIsBatchOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
@@ -396,7 +394,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-100/60 font-sans text-slate-900 flex flex-col selection:bg-slate-900 selection:text-white">
       {/* Top Header */}
       <Header
-        onOpenPrintSheet={() => setIsPrintSheetOpen(true)}
+        onPrint={() => triggerPopupPrint(options, selectedItem)}
         onOpenBatch={() => setIsBatchOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenCatalog={() => setIsCatalogOpen(true)}
@@ -417,7 +415,7 @@ export default function App() {
             <BarcodePreview
               options={options}
               onChangeOptions={setOptions}
-              onQuickPrint={() => setIsPrintSheetOpen(true)}
+              onQuickPrint={() => triggerPopupPrint(options, selectedItem)}
             />
           </div>
 
@@ -439,13 +437,6 @@ export default function App() {
       </main>
 
       {/* Modals & Drawers */}
-      <PrintSheetModal
-        isOpen={isPrintSheetOpen}
-        onClose={() => setIsPrintSheetOpen(false)}
-        options={options}
-        selectedItem={selectedItem}
-      />
-
       <BatchModal
         isOpen={isBatchOpen}
         onClose={() => setIsBatchOpen(false)}

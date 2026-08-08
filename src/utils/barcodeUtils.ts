@@ -1,5 +1,5 @@
 import JsBarcode from 'jsbarcode';
-import { BarcodeFormat, BarcodeOptions } from '../types';
+import { BarcodeFormat, BarcodeOptions, CatalogItem } from '../types';
 
 export function formatPriceWithDecimals(priceStr: string | number | undefined | null): string {
   if (priceStr === undefined || priceStr === null) return '';
@@ -543,3 +543,134 @@ ${priceStr ? `^FO${fxDots + 110},${fyDots + 96}^A0N,26,26^FD${priceStr}^FS` : ''
 
 ^XZ`;
 }
+
+export function triggerPopupPrint(
+  options: BarcodeOptions,
+  selectedItem?: CatalogItem | null,
+  quantity: number = 1
+) {
+  const printerW = options.printerWidthInches || 2.0;
+  const printerH = options.printerHeightInches || 1.0;
+  const pageSizeCss = options.pageSizeCss || `${printerW}in ${printerH}in`;
+
+  // Create an offscreen SVG container to render exact retail label SVG
+  const container = document.createElement('div');
+  container.style.display = 'none';
+  document.body.appendChild(container);
+
+  let labelsHtml = '';
+
+  for (let i = 0; i < quantity; i++) {
+    const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svgEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+    if (options.labelMode === 'barcodeOnly') {
+      JsBarcode(svgEl, options.text.trim(), {
+        format: options.format,
+        lineColor: '#000000',
+        background: 'transparent',
+        width: Math.max(1, options.width * 0.85),
+        height: Math.min(45, options.height * 0.7),
+        displayValue: true,
+        font: options.font,
+        fontSize: 11,
+        margin: 2,
+      });
+    } else {
+      renderRetailLabelSvg(svgEl, {
+        ...options,
+        itemCode: selectedItem ? selectedItem.itemCode : options.itemCode,
+        itemName: options.itemName || (selectedItem ? selectedItem.itemName : 'Product Item'),
+        price: options.price ? formatPriceWithSymbol(options.price) : (selectedItem ? formatPriceWithSymbol(selectedItem.price) : 'SAR 5.00'),
+      });
+    }
+
+    container.appendChild(svgEl);
+    labelsHtml += `<div class="zebra-label-item">${svgEl.outerHTML}</div>`;
+  }
+
+  document.body.removeChild(container);
+
+  // Open the popup window
+  const popup = window.open('', '_blank', 'width=550,height=650,scrollbars=yes,resizable=yes');
+  if (!popup) {
+    // Fallback if popup blocked
+    window.focus();
+    window.print();
+    return;
+  }
+
+  popup.document.open();
+  popup.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Thermal Label Print (${printerW}" × ${printerH}")</title>
+        <style>
+          @page {
+            size: ${pageSizeCss};
+            margin: 0;
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: ${printerW}in !important;
+            height: ${printerH}in !important;
+            background: #ffffff !important;
+          }
+          .zebra-label-item {
+            width: ${printerW}in !important;
+            height: ${printerH}in !important;
+            box-sizing: border-box !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: #ffffff !important;
+          }
+          .zebra-label-item:last-child {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          .zebra-label-item svg {
+            width: ${printerW}in !important;
+            height: ${printerH}in !important;
+            display: block !important;
+            shape-rendering: crispEdges !important;
+            text-rendering: geometricPrecision !important;
+          }
+        </style>
+      </head>
+      <body>
+        ${labelsHtml}
+        <script>
+          window.onload = function() {
+            window.addEventListener('afterprint', function() {
+              window.close();
+            });
+            window.onafterprint = function() {
+              window.close();
+            };
+            setTimeout(function() {
+              window.focus();
+              window.print();
+            }, 150);
+          };
+        </script>
+      </body>
+    </html>
+  `);
+  popup.document.close();
+}
+

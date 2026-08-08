@@ -3,7 +3,7 @@ import { Barcode, Printer, History, Package, Database, BarChart3, ChevronDown, F
 import { ReportType } from './ReportsModal';
 
 interface HeaderProps {
-  onOpenPrintSheet: () => void;
+  onPrint: () => void;
   onOpenBatch?: () => void;
   onOpenHistory: () => void;
   onOpenCatalog: () => void;
@@ -14,7 +14,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  onOpenPrintSheet,
+  onPrint,
   onOpenHistory,
   onOpenCatalog,
   onOpenSupabase,
@@ -147,12 +147,12 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             type="button"
-            onClick={onOpenPrintSheet}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-xs transition-colors focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-            title="Format barcodes onto a printable label sheet"
+            onClick={onPrint}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-xs transition-colors focus:outline-hidden focus:ring-2 focus:ring-slate-900 cursor-pointer"
+            title="Print barcode label via auto-closing popup window"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Print Labels</span>
+            <span>Print</span>
           </button>
 
           <button
