@@ -8,6 +8,7 @@ import { HistoryDrawer } from './components/HistoryDrawer';
 import { CatalogModal } from './components/CatalogModal';
 import { SupabaseSyncModal } from './components/SupabaseSyncModal';
 import { ReportsModal, ReportType } from './components/ReportsModal';
+import { downloadAllItemsExcel } from './utils/excelUtils';
 import { ToastNotification, ToastData } from './components/ToastNotification';
 import { DEFAULT_CATALOG_ITEMS } from './data/catalog';
 import { formatPriceWithDecimals, triggerPopupPrint } from './utils/barcodeUtils';
@@ -403,6 +404,11 @@ export default function App() {
         onOpenReports={(tab = 'new_enlisted') => {
           setActiveReportTab(tab);
           setIsReportsOpen(true);
+        }}
+        onDownloadAllItemsExcel={() => {
+          downloadAllItemsExcel(catalogItems).catch((err) =>
+            console.error('Download All Items Excel failed:', err)
+          );
         }}
         historyCount={history.length}
         catalogCount={catalogItems.length}

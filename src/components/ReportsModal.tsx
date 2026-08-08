@@ -15,8 +15,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Tag,
-  TrendingUp,
-  TrendingDown,
   BarChart3,
 } from 'lucide-react';
 
@@ -281,7 +279,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto flex-1 space-y-6">
-          {/* Filter Controls Bar */}
+          {/* Controls Bar */}
           <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 shadow-2xs space-y-3">
             <div className="flex flex-wrap items-end gap-3">
               {/* From Date */}
@@ -329,7 +327,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
               <button
                 type="button"
                 onClick={activeTab === 'new_enlisted' ? downloadEnlistedCsv : downloadPriceUpdateCsv}
-                disabled={currentResultCount === 0}
+                disabled={(activeTab === 'new_enlisted' ? enlistedItems.length : priceUpdates.length) === 0}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-2xs"
                 title="Download filter results as CSV"
               >
@@ -350,13 +348,13 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
           <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
             <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-slate-500" />
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
                   {activeTab === 'new_enlisted' ? 'New Enlisted Items' : 'Price Updates'}
                 </h3>
               </div>
               <span className="text-xs font-semibold text-slate-500">
-                Found <strong className="text-slate-900">{currentResultCount}</strong> record{currentResultCount === 1 ? '' : 's'}
+                Found <strong className="text-slate-900">{activeTab === 'new_enlisted' ? enlistedItems.length : priceUpdates.length}</strong> record{(activeTab === 'new_enlisted' ? enlistedItems.length : priceUpdates.length) === 1 ? '' : 's'}
               </span>
             </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Barcode, Printer, History, Package, Database, BarChart3, ChevronDown, FileText, Tag } from 'lucide-react';
+import { Barcode, Printer, History, Package, Database, BarChart3, ChevronDown, FileText, Tag, FileSpreadsheet } from 'lucide-react';
 import { ReportType } from './ReportsModal';
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenCatalog: () => void;
   onOpenSupabase: () => void;
   onOpenReports: (reportType?: ReportType) => void;
+  onDownloadAllItemsExcel: () => void;
   historyCount: number;
   catalogCount: number;
 }
@@ -19,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCatalog,
   onOpenSupabase,
   onOpenReports,
+  onDownloadAllItemsExcel,
   historyCount,
   catalogCount,
 }) => {
@@ -79,6 +81,23 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="px-3 py-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase border-b border-slate-100">
                   Select Report
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReportsMenuOpen(false);
+                    onDownloadAllItemsExcel();
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <div className="p-1 rounded bg-emerald-100 text-emerald-700">
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900">All Items Report</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Export full catalog to Excel (.xlsx)</div>
+                  </div>
+                </button>
                 
                 <button
                   type="button"
@@ -86,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsReportsMenuOpen(false);
                     onOpenReports('new_enlisted');
                   }}
-                  className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-900 flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-900 flex items-center gap-2.5 transition-colors cursor-pointer border-t border-slate-100"
                 >
                   <div className="p-1 rounded bg-indigo-100 text-indigo-700">
                     <FileText className="w-3.5 h-3.5" />
