@@ -95,11 +95,16 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
       }
 
       if (options.labelMode === 'barcodeOnly') {
-        JsBarcode(svgElement, options.text.trim(), {
-          format: options.format,
+        const txt = options.text.trim();
+        const isLong = txt.length > 12;
+        const fmt = (options.format === 'CODE39' && isLong) ? 'CODE128' : options.format;
+        const w = isLong ? Math.max(0.95, Math.min(options.width, 1.25)) : options.width;
+
+        JsBarcode(svgElement, txt, {
+          format: fmt,
           lineColor: options.lineColor,
           background: options.background === 'transparent' ? '' : options.background,
-          width: options.width,
+          width: w,
           height: options.height,
           displayValue: options.displayValue,
           font: options.font,
@@ -110,7 +115,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
           textMargin: options.textMargin,
           margin: options.margin,
           flat: options.flat,
-          narrowWideRatio: options.narrowWideRatio || 3,
+          narrowWideRatio: fmt === 'CODE39' ? 2.2 : (options.narrowWideRatio || 3),
           valid: (valid: boolean) => {
             if (!valid) {
               setRenderError(`Value "${options.text}" is not valid for ${options.format} format.`);

@@ -266,21 +266,6 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
   const rawText = options.text !== undefined && options.text !== null ? String(options.text).trim() : '';
   const textToEncode = rawText || (cleanBatch ? `${cleanCode}.${cleanBatch}` : cleanCode);
 
-  // 1. Generate barcode lines using a temporary SVG element
-  const hiddenSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  JsBarcode(hiddenSvg, textToEncode, {
-    format: options.format,
-    lineColor: lineColor,
-    width: options.width,
-    height: Math.min(options.height, 55),
-    displayValue: false,
-    margin: 0,
-    narrowWideRatio: options.narrowWideRatio || 3,
-  } as any);
-
-  const rawBarWidth = parseFloat(hiddenSvg.getAttribute('width') || '220');
-  const rawBarHeight = parseFloat(hiddenSvg.getAttribute('height') || '50');
-
   // Dynamic Label Printer Canvas based on Printer Preset (defaults to 2" x 1" with 1.80" x 0.70" frame)
   const printerW = options.printerWidthInches || 2.0;
   const printerH = options.printerHeightInches || 1.0;
@@ -293,6 +278,70 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
   const frameHeight = Math.round(frameH * 200);
   const frameX = (svgWidth - frameWidth) / 2;
   const frameY = (svgHeight - frameHeight) / 2;
+
+  const bw = options.showBorder !== false ? (options.borderWidth !== undefined ? options.borderWidth : 7) : 0;
+
+  // Ensure a quiet zone margin on both sides (at least 14px away from outer border)
+  const quietZoneMargin = Math.max(16, Math.round(bw + 12));
+  const maxAvailableBarWidth = Math.max(100, frameWidth - quietZoneMargin * 2);
+
+  // Auto-optimize symbology format when text is long (e.g. batch > 8 chars or length > 12)
+  // Code 39 is low-density and becomes unreadably wide for long strings.
+  // Code 128 is high-density and industry standard for batch tracking.
+  let effectiveFormat = options.format;
+  if (options.format === 'CODE39' && textToEncode.length > 12) {
+    effectiveFormat = 'CODE128';
+  }
+
+  // 1. Measure base module count with a 1px test render
+  const testSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  try {
+    JsBarcode(testSvg, textToEncode, {
+      format: effectiveFormat,
+      width: 1,
+      height: 50,
+      displayValue: false,
+      margin: 0,
+      narrowWideRatio: effectiveFormat === 'CODE39' ? 2.2 : (options.narrowWideRatio || 3),
+    } as any);
+  } catch (e) {
+    effectiveFormat = 'CODE128';
+    JsBarcode(testSvg, textToEncode, {
+      format: 'CODE128',
+      width: 1,
+      height: 50,
+      displayValue: false,
+      margin: 0,
+    } as any);
+  }
+
+  const baseModulesWidth = parseFloat(testSvg.getAttribute('width') || '180');
+  const userRequestedWidth = options.width || 1.9;
+
+  // Compute optimal native bar width so JsBarcode produces sharp, un-scaled rects
+  let optimalBarWidth = userRequestedWidth;
+  if (baseModulesWidth * userRequestedWidth > maxAvailableBarWidth) {
+    optimalBarWidth = maxAvailableBarWidth / baseModulesWidth;
+  }
+
+  // Maintain minimum bar module width for scanner readability (at least 0.95px)
+  optimalBarWidth = Math.max(0.95, Math.min(userRequestedWidth, optimalBarWidth));
+  optimalBarWidth = Math.floor(optimalBarWidth * 100) / 100;
+
+  // 2. Generate final barcode lines using optimalBarWidth
+  const hiddenSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  JsBarcode(hiddenSvg, textToEncode, {
+    format: effectiveFormat,
+    lineColor: lineColor,
+    width: optimalBarWidth,
+    height: Math.min(options.height, 55),
+    displayValue: false,
+    margin: 0,
+    narrowWideRatio: effectiveFormat === 'CODE39' ? 2.2 : (options.narrowWideRatio || 3),
+  } as any);
+
+  const rawBarWidth = parseFloat(hiddenSvg.getAttribute('width') || `${baseModulesWidth * optimalBarWidth}`);
+  const rawBarHeight = parseFloat(hiddenSvg.getAttribute('height') || '50');
 
   svgElement.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
   svgElement.setAttribute('width', `${svgWidth}`);
@@ -329,7 +378,6 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
   }
 
   // Outer Border Frame (Fitted inside printer preset dimensions)
-  const bw = options.showBorder !== false ? (options.borderWidth !== undefined ? options.borderWidth : 7) : 0;
   if (bw > 0) {
     const borderRect = document.createElementNS(ns, 'rect');
     borderRect.setAttribute('x', `${frameX + bw / 2}`);
@@ -343,7 +391,11 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
   }
 
   const baseFontSize = options.fontSize || 18;
-  const codeFontSize = Math.max(10, Math.round(baseFontSize));
+  const totalHeaderChars = cleanCode.length + (cleanBatch ? cleanBatch.length : 0);
+  let codeFontSize = Math.max(10, Math.round(baseFontSize));
+  if (totalHeaderChars > 16) {
+    codeFontSize = Math.max(9, Math.round(codeFontSize * (16 / totalHeaderChars)));
+  }
   const priceFontSize = Math.max(12, Math.round(baseFontSize * 1.1));
   const nameFontSize = Math.max(8, Math.round(baseFontSize * 0.72));
 
@@ -426,7 +478,6 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
   const priceY = Math.round(barStartY + targetBarHeight + priceGap);
 
   // Center: Barcode Bars Group (Fit inside border frame)
-  const maxAvailableBarWidth = frameWidth - Math.max(20, (bw + 6) * 2);
   const scaleX = rawBarWidth > maxAvailableBarWidth ? maxAvailableBarWidth / rawBarWidth : 1;
   const effectiveBarWidth = rawBarWidth * scaleX;
   const translateX = (svgWidth - effectiveBarWidth) / 2;
@@ -522,6 +573,8 @@ export function generateZebraZplCode(params: {
 `
     : '';
 
+  const zplModuleWidth = barcode.length > 14 ? 1 : 2;
+
   return `^XA
 ^PW${pwDots}
 ^LL${llDots}
@@ -530,11 +583,11 @@ export function generateZebraZplCode(params: {
 
 ${borderZpl}^FX --- Top Header (Item Code & Batch) ---
 ^FO${fxDots + 15},${fyDots + 12}^A0N,20,20^FD${cleanCode}^FS
-${cleanBatch ? `^FO${fxDots + 220},${fyDots + 12}^A0N,20,20^FD${cleanBatch}^FS` : ''}
+${cleanBatch ? `^FO${fxDots + 200},${fyDots + 12}^A0N,18,18^FD${cleanBatch}^FS` : ''}
 
 ^FX --- Center Barcode (Code 128) ---
-^BY2,2.0,50
-^FO${fxDots + 25},${fyDots + 30}^BCN,50,Y,N,N^FD${barcode}^FS
+^BY${zplModuleWidth},2.0,50
+^FO${fxDots + 20},${fyDots + 30}^BCN,50,Y,N,N^FD${barcode}^FS
 
 ^FX --- Price ---
 ${priceStr ? `^FO${fxDots + 110},${fyDots + 96}^A0N,26,26^FD${priceStr}^FS` : ''}
@@ -566,17 +619,22 @@ export function triggerPopupPrint(
     svgEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
     if (options.labelMode === 'barcodeOnly') {
-      JsBarcode(svgEl, options.text.trim(), {
-        format: options.format,
+      const txt = options.text.trim();
+      const isLong = txt.length > 12;
+      const fmt = (options.format === 'CODE39' && isLong) ? 'CODE128' : options.format;
+      const w = isLong ? Math.max(0.95, Math.min(options.width, 1.25)) : Math.max(1, options.width * 0.85);
+
+      JsBarcode(svgEl, txt, {
+        format: fmt,
         lineColor: '#000000',
         background: 'transparent',
-        width: Math.max(1, options.width * 0.85),
+        width: w,
         height: Math.min(45, options.height * 0.7),
         displayValue: true,
         font: options.font,
         fontSize: 11,
         margin: 2,
-        narrowWideRatio: options.narrowWideRatio || 3,
+        narrowWideRatio: fmt === 'CODE39' ? 2.2 : (options.narrowWideRatio || 3),
       } as any);
     } else {
       renderRetailLabelSvg(svgEl, {
