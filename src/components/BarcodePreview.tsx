@@ -584,11 +584,11 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
               </label>
               <input
                 type="text"
-                value={options.batchNumber || ''}
+                value={options.batch || ''}
                 onChange={(e) =>
                   onChangeOptions({
                     ...options,
-                    batchNumber: e.target.value,
+                    batch: e.target.value,
                   })
                 }
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
@@ -617,13 +617,12 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                 Price
               </label>
               <input
-                type="number"
-                step="0.01"
+                type="text"
                 value={options.price !== undefined ? options.price : ''}
                 onChange={(e) =>
                   onChangeOptions({
                     ...options,
-                    price: parseFloat(e.target.value) || 0,
+                    price: e.target.value,
                   })
                 }
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white text-xs font-semibold focus:ring-1 focus:ring-emerald-500 focus:outline-none"
