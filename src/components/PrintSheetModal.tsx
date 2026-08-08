@@ -176,6 +176,12 @@ export const PrintSheetModal: React.FC<PrintSheetModalProps> = ({
           ${printableSheet.innerHTML}
           <script>
             window.onload = function() {
+              window.addEventListener('afterprint', function() {
+                window.close();
+              });
+              window.onafterprint = function() {
+                window.close();
+              };
               setTimeout(function() {
                 window.focus();
                 window.print();
