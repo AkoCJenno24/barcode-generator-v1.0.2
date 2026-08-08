@@ -160,7 +160,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
       x: e.clientX,
       y: e.clientY,
       height: options.height || 50,
-      barWidth: options.width || 2,
+      barWidth: options.width || 1.9,
       borderWidth: options.borderWidth !== undefined ? options.borderWidth : 7,
       fontSize: baseFontSize,
       barcodePriceGap: options.barcodePriceGap !== undefined ? options.barcodePriceGap : defaultGap,
@@ -675,7 +675,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-800 text-[11px]">Barcode Height & Width</span>
                   <span className="font-mono text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
-                    {options.height || 50}px × {options.width || 2}x
+                    {options.height || 50}px × {options.width || 1.9}x
                   </span>
                 </div>
                 <div className="space-y-1.5">
@@ -730,7 +730,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                       min="1"
                       max="4"
                       step="0.1"
-                      value={options.width || 2}
+                      value={options.width || 1.9}
                       onChange={(e) =>
                         onChangeOptions({
                           ...options,
@@ -740,7 +740,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                       className="flex-1 accent-emerald-600 h-1.5 cursor-pointer"
                     />
                     <div className="flex items-center gap-1 shrink-0 font-mono font-bold text-slate-700">
-                      {options.width || 2}x
+                      {options.width || 1.9}x
                     </div>
                   </div>
                 </div>

@@ -769,7 +769,7 @@ export const BarcodeControls: React.FC<BarcodeControlsProps> = ({
                 {[
                   { label: '1x', val: 1 },
                   { label: '1.5x', val: 1.5 },
-                  { label: '1.8x (Default)', val: 1.8 },
+                  { label: '1.9x (Default)', val: 1.9 },
                   { label: '2x', val: 2 },
                   { label: '2.5x', val: 2.5 },
                 ].map((preset) => {
