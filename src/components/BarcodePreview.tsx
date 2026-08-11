@@ -70,7 +70,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
     barWidth: 2,
     borderWidth: 7,
     fontSize: 18,
-    barcodePriceGap: 15,
+    barcodePriceGap: 25,
     borderTextGap: 6,
   });
 
@@ -96,9 +96,8 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
 
       if (options.labelMode === 'barcodeOnly') {
         const txt = options.text.trim();
-        const isLong = txt.length > 12;
-        const fmt = (options.format === 'CODE39' && isLong) ? 'CODE128' : options.format;
-        const w = isLong ? Math.max(0.95, Math.min(options.width, 1.25)) : options.width;
+        const fmt = (options.format === 'CODE39' && (txt.includes('.') || txt.length > 10)) ? 'CODE128' : options.format;
+        const w = options.width;
 
         JsBarcode(svgElement, txt, {
           format: fmt,
@@ -158,7 +157,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
 
     const baseFontSize = options.fontSize || 18;
-    const defaultGap = Math.round(baseFontSize * 0.85);
+    const defaultGap = 25;
 
     setIsDragging(dragType);
     setDragStart({
@@ -499,7 +498,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                 {isDragging === 'border' && <span>Border Thickness: {options.borderWidth ?? 7}px</span>}
                 {isDragging === 'borderTextGap' && <span>Border ↔ Inside Text Gap: {options.borderTextGap ?? 6}px</span>}
                 {isDragging === 'font' && <span>Text Font Size: {options.fontSize ?? 18}px</span>}
-                {isDragging === 'gap' && <span>Barcode ↔ Price Gap: {options.barcodePriceGap ?? Math.round((options.fontSize || 18) * 0.85)}px</span>}
+                {isDragging === 'gap' && <span>Barcode ↔ Price Gap: {options.barcodePriceGap ?? 25}px</span>}
                 {(isDragging === 'bottom' || isDragging === 'corner') && <span>Height: {options.height}px</span>}
                 {(isDragging === 'right' || isDragging === 'corner') && <span>Bar Width: {options.width}</span>}
               </div>
@@ -760,7 +759,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                     <span className="font-bold text-slate-800 text-[11px]">Barcode ↔ Price Spacing Gap</span>
                   </div>
                   <span className="font-mono text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded">
-                    {options.barcodePriceGap ?? Math.round((options.fontSize || 18) * 0.85)} px
+                    {options.barcodePriceGap ?? 25} px
                   </span>
                 </div>
 
@@ -770,7 +769,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                     min="0"
                     max="40"
                     step="1"
-                    value={options.barcodePriceGap ?? Math.round((options.fontSize || 18) * 0.85)}
+                    value={options.barcodePriceGap ?? 25}
                     onChange={(e) =>
                       onChangeOptions({
                         ...options,
@@ -783,7 +782,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        const currentGap = options.barcodePriceGap ?? Math.round((options.fontSize || 18) * 0.85);
+                        const currentGap = options.barcodePriceGap ?? 25;
                         onChangeOptions({
                           ...options,
                           barcodePriceGap: Math.max(0, currentGap - 2),
@@ -796,7 +795,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        const currentGap = options.barcodePriceGap ?? Math.round((options.fontSize || 18) * 0.85);
+                        const currentGap = options.barcodePriceGap ?? 25;
                         onChangeOptions({
                           ...options,
                           barcodePriceGap: Math.min(40, currentGap + 2),
@@ -821,7 +820,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                         })
                       }
                       className={`px-1.5 py-0.5 rounded font-mono font-semibold cursor-pointer ${
-                        (options.barcodePriceGap ?? Math.round((options.fontSize || 18) * 0.85)) === g
+                        (options.barcodePriceGap ?? 25) === g
                           ? 'bg-purple-600 text-white shadow-2xs'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
@@ -832,16 +831,15 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const defaultGap = Math.round((options.fontSize || 18) * 0.85);
                       onChangeOptions({
                         ...options,
-                        barcodePriceGap: defaultGap,
+                        barcodePriceGap: 25,
                       });
                     }}
-                    title="Reset to default auto gap"
+                    title="Reset gap to default 25px"
                     className="px-1.5 py-0.5 rounded text-purple-700 hover:bg-purple-50 font-sans font-bold cursor-pointer text-[9px]"
                   >
-                    Auto
+                    Reset
                   </button>
                 </div>
               </div>

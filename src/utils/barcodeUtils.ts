@@ -229,6 +229,40 @@ function wrapText(text: string, font: string, maxWidth: number): string[] {
   return lines.length > 0 ? lines : [text];
 }
 
+export function getAutoFitNameLinesAndSize(
+  text: string,
+  fontFamily: string,
+  fontWeight: string,
+  maxWidth: number,
+  initialFontSize: number = 14,
+  minFontSize: number = 8,
+  maxLines: number = 2
+): { fontSize: number; lines: string[] } {
+  const cleanText = text.trim();
+  if (!cleanText) return { fontSize: initialFontSize, lines: [] };
+
+  let currentSize = initialFontSize;
+  while (currentSize >= minFontSize) {
+    const fontSpec = `${fontWeight} ${currentSize}px ${fontFamily}`;
+    const lines = wrapText(cleanText, fontSpec, maxWidth);
+    if (lines.length <= maxLines) {
+      return { fontSize: currentSize, lines };
+    }
+    currentSize -= 0.5;
+    currentSize = Math.round(currentSize * 10) / 10;
+  }
+
+  const fallbackFontSpec = `${fontWeight} ${minFontSize}px ${fontFamily}`;
+  const lines = wrapText(cleanText, fallbackFontSpec, maxWidth);
+  if (lines.length > maxLines) {
+    const kept = lines.slice(0, maxLines - 1);
+    const lastLine = lines.slice(maxLines - 1).join(' ');
+    kept.push(lastLine);
+    return { fontSize: minFontSize, lines: kept };
+  }
+  return { fontSize: minFontSize, lines };
+}
+
 export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: BarcodeOptions) {
   while (svgElement.firstChild) {
     svgElement.removeChild(svgElement.firstChild);
@@ -285,11 +319,9 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
   const quietZoneMargin = Math.max(16, Math.round(bw + 12));
   const maxAvailableBarWidth = Math.max(100, frameWidth - quietZoneMargin * 2);
 
-  // Auto-optimize symbology format when text is long (e.g. batch > 8 chars or length > 12)
-  // Code 39 is low-density and becomes unreadably wide for long strings.
-  // Code 128 is high-density and industry standard for batch tracking.
+  // Auto-optimize symbology format for retail labels (consistently use CODE128 for batch text/dots or long strings)
   let effectiveFormat = options.format;
-  if (options.format === 'CODE39' && textToEncode.length > 12) {
+  if (options.format === 'CODE39' && (textToEncode.includes('.') || cleanBatch || textToEncode.length > 10)) {
     effectiveFormat = 'CODE128';
   }
 
@@ -341,7 +373,6 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
   } as any);
 
   const rawBarWidth = parseFloat(hiddenSvg.getAttribute('width') || `${baseModulesWidth * optimalBarWidth}`);
-  const rawBarHeight = parseFloat(hiddenSvg.getAttribute('height') || '50');
 
   svgElement.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
   svgElement.setAttribute('width', `${svgWidth}`);
@@ -390,21 +421,25 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
     svgElement.appendChild(borderRect);
   }
 
+  const borderTextGap = options.borderTextGap !== undefined ? options.borderTextGap : 6;
   const baseFontSize = options.fontSize || 18;
+
   const totalHeaderChars = cleanCode.length + (cleanBatch ? cleanBatch.length : 0);
   let codeFontSize = Math.max(10, Math.round(baseFontSize));
   if (totalHeaderChars > 16) {
     codeFontSize = Math.max(9, Math.round(codeFontSize * (16 / totalHeaderChars)));
   }
-  const priceFontSize = Math.max(12, Math.round(baseFontSize * 1.1));
-  const nameFontSize = Math.max(8, Math.round(baseFontSize * 0.72));
+  const priceFontSize = Math.max(13, Math.round(baseFontSize * 1.12));
 
-  const borderTextGap = options.borderTextGap !== undefined ? options.borderTextGap : 6;
   const paddingX = frameX + Math.max(4, bw + borderTextGap);
   const rightX = frameX + frameWidth - Math.max(4, bw + borderTextGap);
-  const topTextY = frameY + Math.max(12, Math.round(codeFontSize * 0.9)) + (bw > 0 ? bw / 2 : 0) + (borderTextGap > 6 ? (borderTextGap - 6) * 0.8 : 0);
+  const maxNameWidth = Math.max(40, rightX - paddingX);
 
-  // Top Left: Item Code (e.g., 11001788)
+  // Top Left & Top Right Header baseline Y
+  const topTextY = frameY + bw + Math.round(codeFontSize * 0.92) + Math.max(2, Math.round(borderTextGap * 0.4));
+  const topHeaderBottom = topTextY + Math.round(codeFontSize * 0.2);
+
+  // Top Left: Item Code (e.g., 66001512)
   const codeText = document.createElementNS(ns, 'text');
   codeText.setAttribute('x', `${paddingX}`);
   codeText.setAttribute('y', `${topTextY}`);
@@ -431,7 +466,7 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
     svgElement.appendChild(wasfatyText);
   }
 
-  // Top Right: Batch Number (e.g., DD0190)
+  // Top Right: Batch Number (e.g., 521610)
   if (cleanBatch) {
     const batchText = document.createElementNS(ns, 'text');
     batchText.setAttribute('x', `${rightX}`);
@@ -446,38 +481,45 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
     svgElement.appendChild(batchText);
   }
 
-  // Item Name Wrapping & Layout Calculation
-  const nameFontSpec = `${weightVal} ${nameFontSize}px ${fontStyle}`;
-  const maxNameWidth = Math.max(40, rightX - paddingX);
-  const nameLines = itemName ? wrapText(itemName, nameFontSpec, maxNameWidth) : [];
-  const lineSpacing = Math.round(nameFontSize * 1.22);
+  // Auto Font Sizing & Wrapping for Item Name
+  const initialNameFontSize = Math.max(10, Math.round(baseFontSize * 0.74));
+  const { fontSize: nameFontSize, lines: nameLines } = getAutoFitNameLinesAndSize(
+    itemName,
+    fontStyle,
+    weightVal,
+    maxNameWidth,
+    initialNameFontSize,
+    8,
+    2
+  );
 
-  const lastLineY = frameY + frameHeight - Math.max(6, Math.round(nameFontSize * 0.4)) - (bw > 0 ? bw / 2 : 0) - (borderTextGap > 6 ? (borderTextGap - 6) * 0.8 : 0);
-  const bottomNameTop = nameLines.length > 0
-    ? (lastLineY - (nameLines.length - 1) * lineSpacing - nameFontSize)
-    : (frameY + frameHeight - Math.max(4, bw + borderTextGap));
+  const nameLineSpacing = Math.round(nameFontSize * 1.18);
+  const lastLineY = frameY + frameHeight - bw - Math.max(3, Math.round(borderTextGap * 0.5));
+  const firstLineY = nameLines.length > 0 ? (lastLineY - (nameLines.length - 1) * nameLineSpacing) : lastLineY;
+  const bottomNameTop = nameLines.length > 0 ? (firstLineY - nameFontSize * 0.8) : (frameY + frameHeight - bw - borderTextGap);
 
-  // Calculate available vertical space for [Barcode + Price] to perfectly center them in the frame
-  const topHeaderBottom = topTextY + 4;
+  // Available middle height for [Barcode + Price]
   const availableMiddleHeight = Math.max(20, bottomNameTop - topHeaderBottom);
 
   const formattedPrice = formatPriceWithSymbol(price);
-  const targetBarHeight = Math.min(
-    options.height || 50,
-    Math.max(20, Math.round(availableMiddleHeight - (formattedPrice ? priceFontSize * 1.1 : 0) - 8))
-  );
+  const priceGap = formattedPrice ? (options.barcodePriceGap !== undefined ? options.barcodePriceGap : 25) : 0;
+  const priceTextHeight = formattedPrice ? priceFontSize * 0.85 : 0;
 
-  const defaultPriceGap = Math.round(priceFontSize * 0.85);
-  const priceGap = formattedPrice
-    ? (options.barcodePriceGap !== undefined ? options.barcodePriceGap : defaultPriceGap)
-    : 0;
-  const totalBlockHeight = targetBarHeight + (formattedPrice ? priceGap : 0);
+  // Maximum barcode height that can fit in available middle height
+  const absoluteMaxBarHeight = Math.max(12, Math.round(availableMiddleHeight - priceTextHeight - priceGap - 2));
+  // Default proportioned retail bar height (prevents bar height from locking targetBarHeight + priceGap to a constant)
+  const defaultRetailBarHeight = Math.min(Math.max(16, Math.round(availableMiddleHeight * 0.45)), 36);
+  const requestedBarHeight = options.height && options.height < 80 ? options.height : defaultRetailBarHeight;
 
-  // Calculate exact vertical start Y for Barcode to place [Barcode + Price] centered inside frame
-  const barStartY = Math.round(topHeaderBottom + Math.max(0, (availableMiddleHeight - totalBlockHeight) / 2));
-  const priceY = Math.round(barStartY + targetBarHeight + priceGap);
+  const targetBarHeight = Math.min(requestedBarHeight, absoluteMaxBarHeight);
 
-  // Center: Barcode Bars Group (Fit inside border frame)
+  const totalMiddleContentHeight = targetBarHeight + priceGap + priceTextHeight;
+  const topGap = Math.max(0, Math.round((availableMiddleHeight - totalMiddleContentHeight) / 2));
+
+  const barStartY = Math.round(topHeaderBottom + topGap);
+  const priceY = Math.round(barStartY + targetBarHeight + priceGap + priceFontSize * 0.82);
+
+  // Center: Barcode Bars Group
   const scaleX = rawBarWidth > maxAvailableBarWidth ? maxAvailableBarWidth / rawBarWidth : 1;
   const effectiveBarWidth = rawBarWidth * scaleX;
   const translateX = (svgWidth - effectiveBarWidth) / 2;
@@ -491,7 +533,7 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
   barGroup.innerHTML = hiddenSvg.innerHTML;
   svgElement.appendChild(barGroup);
 
-  // Below Barcode (Centered both horizontally & vertically): Price (e.g., ⃁ 43.20)
+  // Below Barcode: Price (e.g., SAR 171.35)
   if (formattedPrice) {
     const priceText = document.createElementNS(ns, 'text');
     priceText.setAttribute('x', `${svgWidth / 2}`);
@@ -506,7 +548,7 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
     svgElement.appendChild(priceText);
   }
 
-  // Bottom Left: Item Name (Wrapped within border line, justified from left)
+  // Bottom Left: Item Name (1 or 2 lines auto font-sized)
   if (nameLines.length > 0) {
     const nameText = document.createElementNS(ns, 'text');
     nameText.setAttribute('x', `${paddingX}`);
@@ -517,12 +559,10 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
     nameText.setAttribute('fill', lineColor);
     nameText.setAttribute('text-anchor', 'start');
 
-    const firstLineY = lastLineY - (nameLines.length - 1) * lineSpacing;
-
     nameLines.forEach((line, index) => {
       const tspan = document.createElementNS(ns, 'tspan');
       tspan.setAttribute('x', `${paddingX}`);
-      tspan.setAttribute('y', `${firstLineY + index * lineSpacing}`);
+      tspan.setAttribute('y', `${firstLineY + index * nameLineSpacing}`);
       tspan.textContent = line;
       nameText.appendChild(tspan);
     });
@@ -620,9 +660,8 @@ export function triggerPopupPrint(
 
     if (options.labelMode === 'barcodeOnly') {
       const txt = options.text.trim();
-      const isLong = txt.length > 12;
-      const fmt = (options.format === 'CODE39' && isLong) ? 'CODE128' : options.format;
-      const w = isLong ? Math.max(0.95, Math.min(options.width, 1.25)) : Math.max(1, options.width * 0.85);
+      const fmt = (options.format === 'CODE39' && (txt.includes('.') || txt.length > 10)) ? 'CODE128' : options.format;
+      const w = Math.max(1, Math.min(options.width, 1.8));
 
       JsBarcode(svgEl, txt, {
         format: fmt,

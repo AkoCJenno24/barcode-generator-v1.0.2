@@ -53,7 +53,7 @@ const DEFAULT_OPTIONS: BarcodeOptions = {
   showBorder: true,
   borderWidth: 3,
   borderTextGap: 8,
-  barcodePriceGap: 6,
+  barcodePriceGap: 25,
   activeFrameWidthInches: 1.90,
   activeFrameHeightInches: 0.90,
   wasfatyType: 'Non-Wasfaty',

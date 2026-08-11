@@ -223,7 +223,7 @@ export function applyPrinterPreset(
     fontSize: preset.recommendedFontSize,
     borderWidth: preset.recommendedBorderWidth,
     borderTextGap: currentOptions.borderTextGap !== undefined ? currentOptions.borderTextGap : 8,
-    barcodePriceGap: currentOptions.barcodePriceGap !== undefined ? currentOptions.barcodePriceGap : 6,
+    barcodePriceGap: currentOptions.barcodePriceGap !== undefined ? currentOptions.barcodePriceGap : 25,
   };
 }
 

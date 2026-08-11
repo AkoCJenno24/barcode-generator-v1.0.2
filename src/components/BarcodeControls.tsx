@@ -742,6 +742,58 @@ export const BarcodeControls: React.FC<BarcodeControlsProps> = ({
                       })}
                     </div>
                   </div>
+
+                  {/* Gap Between Barcode and Price */}
+                  <div className="pt-2.5 border-t border-slate-200/70 space-y-1.5">
+                    <div className="flex items-center justify-between text-slate-700">
+                      <label htmlFor="barcode-price-gap-slider" className="font-semibold text-xs flex items-center gap-1.5">
+                        <span>Gap: Barcode ↔ Price Text</span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-purple-100 text-purple-800">
+                          Spacing
+                        </span>
+                      </label>
+                      <span className="font-mono font-bold text-purple-900 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 text-xs">
+                        {options.barcodePriceGap !== undefined ? options.barcodePriceGap : 25} px
+                      </span>
+                    </div>
+                    <input
+                      id="barcode-price-gap-slider"
+                      type="range"
+                      min="0"
+                      max="40"
+                      step="1"
+                      value={options.barcodePriceGap !== undefined ? options.barcodePriceGap : 25}
+                      onChange={(e) => updateOption('barcodePriceGap', parseInt(e.target.value, 10))}
+                      className="w-full accent-purple-600 cursor-pointer"
+                    />
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <span className="text-[10px] text-slate-400 font-medium">Presets:</span>
+                      {[
+                        { label: '0px', val: 0 },
+                        { label: '8px', val: 8 },
+                        { label: '18px', val: 18 },
+                        { label: '25px', val: 25 },
+                        { label: '35px', val: 35 },
+                      ].map((preset) => {
+                        const currentGap = options.barcodePriceGap !== undefined ? options.barcodePriceGap : 25;
+                        const isActive = currentGap === preset.val;
+                        return (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => updateOption('barcodePriceGap', preset.val)}
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded transition-all cursor-pointer ${
+                              isActive
+                                ? 'bg-purple-600 text-white shadow-xs'
+                                : 'bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </>
               )}
             </div>
