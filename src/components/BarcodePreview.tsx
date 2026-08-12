@@ -512,6 +512,12 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                   {(options.printerWidthInches || 2.0).toFixed(2)}″ × {(options.printerHeightInches || 1.0).toFixed(2)}″ Label
                 </span>
 
+                {options.thermalAntiBleed !== false && (
+                  <span className="flex items-center gap-1 bg-amber-950/80 text-amber-300 border border-amber-700/60 px-2 py-0.5 rounded text-[9px] font-bold">
+                    <span>Anti-Collision: {options.barWidthReduction ?? 0.35}px BWR</span>
+                  </span>
+                )}
+
                 {onChangeOptions && (
                   <div className="flex items-center gap-1.5 bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700">
                     <span className="text-slate-300">Height:</span>

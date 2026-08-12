@@ -42,6 +42,8 @@ export interface BarcodeOptions {
   letterSpacing?: number;
   wasfatyType?: 'Wasfaty' | 'Non-Wasfaty';
   narrowWideRatio?: number; // Ratio of wide bars to narrow bars (default: 3)
+  thermalAntiBleed?: boolean; // Prevents thermal print head heat bleed and line collision
+  barWidthReduction?: number; // Bar Width Reduction (BWR) in px (0 to 0.6)
   printerPresetId?: string;
   printerWidthInches?: number;
   printerHeightInches?: number;

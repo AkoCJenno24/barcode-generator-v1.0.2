@@ -58,6 +58,8 @@ const DEFAULT_OPTIONS: BarcodeOptions = {
   activeFrameHeightInches: 0.90,
   wasfatyType: 'Non-Wasfaty',
   narrowWideRatio: 3,
+  thermalAntiBleed: true,
+  barWidthReduction: 0.35,
 };
 
 export default function App() {

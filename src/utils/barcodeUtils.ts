@@ -319,9 +319,9 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
   const quietZoneMargin = Math.max(16, Math.round(bw + 12));
   const maxAvailableBarWidth = Math.max(100, frameWidth - quietZoneMargin * 2);
 
-  // Auto-optimize symbology format for retail labels (consistently use CODE128 for batch text/dots or long strings)
+  // Auto-optimize symbology format for retail labels (use CODE128 for batch text, dots, or strings > 6 chars to prevent bar collision)
   let effectiveFormat = options.format;
-  if (options.format === 'CODE39' && (textToEncode.includes('.') || cleanBatch || textToEncode.length > 10)) {
+  if (options.format === 'CODE39' && (textToEncode.includes('.') || cleanBatch || textToEncode.length > 6)) {
     effectiveFormat = 'CODE128';
   }
 
@@ -347,8 +347,25 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
     } as any);
   }
 
-  const baseModulesWidth = parseFloat(testSvg.getAttribute('width') || '180');
-  const userRequestedWidth = options.width || 1.9;
+  let baseModulesWidth = parseFloat(testSvg.getAttribute('width') || '180');
+  const userRequestedWidth = options.width || 2;
+
+  // If CODE39 makes modules too narrow (<1.35px) and causes thermal print bleed/bar collision, upgrade to CODE128
+  if (effectiveFormat === 'CODE39' && (maxAvailableBarWidth / baseModulesWidth) < 1.35) {
+    effectiveFormat = 'CODE128';
+    try {
+      JsBarcode(testSvg, textToEncode, {
+        format: 'CODE128',
+        width: 1,
+        height: 50,
+        displayValue: false,
+        margin: 0,
+      } as any);
+      baseModulesWidth = parseFloat(testSvg.getAttribute('width') || '80');
+    } catch (e) {
+      // fallback
+    }
+  }
 
   // Compute optimal native bar width so JsBarcode produces sharp, un-scaled rects
   let optimalBarWidth = userRequestedWidth;
@@ -356,8 +373,8 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
     optimalBarWidth = maxAvailableBarWidth / baseModulesWidth;
   }
 
-  // Maintain minimum bar module width for scanner readability (at least 0.95px)
-  optimalBarWidth = Math.max(0.95, Math.min(userRequestedWidth, optimalBarWidth));
+  // Maintain minimum bar module width for scanner readability (at least 1.1px)
+  optimalBarWidth = Math.max(1.1, Math.min(userRequestedWidth, optimalBarWidth));
   optimalBarWidth = Math.floor(optimalBarWidth * 100) / 100;
 
   // 2. Generate final barcode lines using optimalBarWidth
@@ -524,13 +541,36 @@ export function renderRetailLabelSvg(svgElement: SVGSVGElement, options: Barcode
   const effectiveBarWidth = rawBarWidth * scaleX;
   const translateX = (svgWidth - effectiveBarWidth) / 2;
 
+  // Bar Width Reduction (BWR) to compensate for thermal print head heat bleed / dot expansion
+  const bwrAmount = options.barWidthReduction !== undefined
+    ? options.barWidthReduction
+    : (options.thermalAntiBleed !== false ? 0.35 : 0);
+
   const barGroup = document.createElementNS(ns, 'g');
-  if (scaleX !== 1) {
+  if (scaleX !== 1 && scaleX > 0) {
     barGroup.setAttribute('transform', `translate(${translateX}, ${barStartY}) scale(${scaleX}, 1)`);
   } else {
     barGroup.setAttribute('transform', `translate(${translateX}, ${barStartY})`);
   }
-  barGroup.innerHTML = hiddenSvg.innerHTML;
+
+  // Clone hiddenSvg rects and reduce black bar width slightly so thermal heat expansion creates crisp, un-collided white spaces
+  const clonedBars = hiddenSvg.cloneNode(true) as SVGSVGElement;
+  if (bwrAmount > 0) {
+    const rects = clonedBars.querySelectorAll('rect');
+    rects.forEach((rect) => {
+      const x = parseFloat(rect.getAttribute('x') || '0');
+      const w = parseFloat(rect.getAttribute('width') || '0');
+      // Apply BWR to black bars wider than 0.35px
+      if (w > 0.35) {
+        const reducedW = Math.max(0.3, w - bwrAmount);
+        const shiftX = (w - reducedW) / 2;
+        rect.setAttribute('x', `${(x + shiftX).toFixed(3)}`);
+        rect.setAttribute('width', `${reducedW.toFixed(3)}`);
+      }
+    });
+  }
+
+  barGroup.innerHTML = clonedBars.innerHTML;
   svgElement.appendChild(barGroup);
 
   // Below Barcode: Price (e.g., SAR 171.35)

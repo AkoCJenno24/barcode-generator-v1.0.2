@@ -893,6 +893,88 @@ export const BarcodeControls: React.FC<BarcodeControlsProps> = ({
               </div>
             </div>
 
+            {/* Thermal Print Bar Anti-Bleed & Line Collision Guard (BWR) */}
+            <div className="p-3 bg-amber-50/80 rounded-lg border border-amber-200/80 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  <label htmlFor="thermal-anti-bleed-toggle" className="font-bold text-xs text-amber-950 flex items-center gap-1.5 cursor-pointer">
+                    <span>Bar Anti-Collision & Heat Bleed Guard</span>
+                  </label>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono font-bold text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300/60">
+                    BWR: {options.barWidthReduction !== undefined ? options.barWidthReduction : (options.thermalAntiBleed !== false ? 0.35 : 0)}px
+                  </span>
+                  <input
+                    id="thermal-anti-bleed-toggle"
+                    type="checkbox"
+                    checked={options.thermalAntiBleed !== false}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      updateOption('thermalAntiBleed', enabled);
+                      if (!enabled) {
+                        updateOption('barWidthReduction', 0);
+                      } else {
+                        updateOption('barWidthReduction', 0.35);
+                      }
+                    }}
+                    className="w-4 h-4 text-amber-600 rounded cursor-pointer accent-amber-600"
+                  />
+                </div>
+              </div>
+
+              <p className="text-[10px] text-amber-800 leading-relaxed font-medium">
+                Prevents barcode lines from merging or bleeding together on thermal paper (e.g. Zebra/Xprinter/TSC). Trims black bar widths slightly so white gaps stay wide & scannable.
+              </p>
+
+              {options.thermalAntiBleed !== false && (
+                <div className="space-y-1.5 pt-1 border-t border-amber-200/60">
+                  <div className="flex items-center justify-between text-[11px] text-amber-900 font-semibold">
+                    <span>Bar Width Reduction (BWR)</span>
+                    <span className="font-mono text-[10px]">{options.barWidthReduction ?? 0.35} px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="0.6"
+                    step="0.05"
+                    value={options.barWidthReduction ?? 0.35}
+                    onChange={(e) => updateOption('barWidthReduction', parseFloat(e.target.value))}
+                    className="w-full accent-amber-600 cursor-pointer"
+                  />
+                  <div className="flex items-center gap-1 pt-0.5 flex-wrap">
+                    {[
+                      { label: 'Off (0px)', val: 0 },
+                      { label: 'Light (0.2px)', val: 0.2 },
+                      { label: 'Std Thermal (0.35px)', val: 0.35 },
+                      { label: 'High Heat (0.5px)', val: 0.5 },
+                    ].map((preset) => {
+                      const currentBwr = options.barWidthReduction ?? 0.35;
+                      const isActive = Math.abs(currentBwr - preset.val) < 0.02;
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            updateOption('thermalAntiBleed', preset.val > 0);
+                            updateOption('barWidthReduction', preset.val);
+                          }}
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-amber-800 text-white shadow-xs'
+                              : 'bg-white text-amber-900 hover:bg-amber-100 border border-amber-200'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Height */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-slate-700">
