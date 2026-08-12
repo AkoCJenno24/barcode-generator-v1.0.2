@@ -69,7 +69,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
     height: 50,
     barWidth: 2,
     borderWidth: 7,
-    fontSize: 18,
+    fontSize: 28,
     barcodePriceGap: 25,
     borderTextGap: 6,
   });
@@ -156,7 +156,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
 
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
 
-    const baseFontSize = options.fontSize || 18;
+    const baseFontSize = options.fontSize || 28;
     const defaultGap = 25;
 
     setIsDragging(dragType);
@@ -497,7 +497,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
               <div className="mt-2 bg-emerald-500 text-white text-[11px] font-mono font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
                 {isDragging === 'border' && <span>Border Thickness: {options.borderWidth ?? 7}px</span>}
                 {isDragging === 'borderTextGap' && <span>Border ↔ Inside Text Gap: {options.borderTextGap ?? 6}px</span>}
-                {isDragging === 'font' && <span>Text Font Size: {options.fontSize ?? 18}px</span>}
+                {isDragging === 'font' && <span>Text Font Size: {options.fontSize ?? 28}px</span>}
                 {isDragging === 'gap' && <span>Barcode ↔ Price Gap: {options.barcodePriceGap ?? 25}px</span>}
                 {(isDragging === 'bottom' || isDragging === 'corner') && <span>Height: {options.height}px</span>}
                 {(isDragging === 'right' || isDragging === 'corner') && <span>Bar Width: {options.width}</span>}
@@ -851,16 +851,16 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-800 text-[11px]">Text Font Size</span>
                   <span className="font-mono text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded">
-                    {options.fontSize || 18} px
+                    {options.fontSize || 28} px
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
                     type="range"
                     min="10"
-                    max="32"
+                    max="36"
                     step="1"
-                    value={options.fontSize || 18}
+                    value={options.fontSize || 28}
                     onChange={(e) =>
                       onChangeOptions({
                         ...options,
@@ -875,7 +875,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                       onClick={() =>
                         onChangeOptions({
                           ...options,
-                          fontSize: Math.max(10, (options.fontSize || 18) - 2),
+                          fontSize: Math.max(10, (options.fontSize || 28) - 2),
                         })
                       }
                       className="w-4 h-4 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold cursor-pointer"
@@ -887,7 +887,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                       onClick={() =>
                         onChangeOptions({
                           ...options,
-                          fontSize: Math.min(32, (options.fontSize || 18) + 2),
+                          fontSize: Math.min(36, (options.fontSize || 28) + 2),
                         })
                       }
                       className="w-4 h-4 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold cursor-pointer"
@@ -897,7 +897,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-1 justify-between text-[10px]">
-                  {[12, 16, 18, 22, 26].map((sz) => (
+                  {[14, 18, 22, 28, 32].map((sz) => (
                     <button
                       key={sz}
                       type="button"
@@ -908,7 +908,7 @@ export const BarcodePreview: React.FC<BarcodePreviewProps> = ({
                         })
                       }
                       className={`px-1.5 py-0.5 rounded font-mono font-semibold cursor-pointer ${
-                        (options.fontSize || 18) === sz
+                        (options.fontSize || 28) === sz
                           ? 'bg-sky-600 text-white'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}

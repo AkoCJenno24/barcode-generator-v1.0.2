@@ -821,8 +821,8 @@ export const BarcodeControls: React.FC<BarcodeControlsProps> = ({
                 {[
                   { label: '1x', val: 1 },
                   { label: '1.5x', val: 1.5 },
-                  { label: '1.9x (Default)', val: 1.9 },
-                  { label: '2x', val: 2 },
+                  { label: '1.9x', val: 1.9 },
+                  { label: '2x (Default)', val: 2 },
                   { label: '2.5x', val: 2.5 },
                 ].map((preset) => {
                   const isActive = options.width === preset.val;
@@ -1024,7 +1024,7 @@ export const BarcodeControls: React.FC<BarcodeControlsProps> = ({
                     id="font-size-slider"
                     type="range"
                     min="10"
-                    max="26"
+                    max="36"
                     value={options.fontSize}
                     onChange={(e) => updateOption('fontSize', parseInt(e.target.value, 10))}
                     className="w-full accent-slate-900 cursor-pointer"
