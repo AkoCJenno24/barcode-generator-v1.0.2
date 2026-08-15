@@ -51,7 +51,33 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://jgjasyvtqzrcg
 const SQL_SCHEMA_SCRIPT = `-- Supabase Table Schema for Barcode Generator Application
 -- Copy and paste this into your Supabase Dashboard -> SQL Editor and click 'Run'
 
--- 1. Create Catalog Items Table
+-- 1. Create App Users Table for Login & Authentication
+CREATE TABLE IF NOT EXISTS public.app_users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  full_name TEXT,
+  role TEXT DEFAULT 'admin',
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS for app_users
+ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow anonymous read for app_users login" ON public.app_users;
+CREATE POLICY "Allow anonymous read for app_users login" ON public.app_users FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow public insert/update app_users" ON public.app_users;
+CREATE POLICY "Allow public insert/update app_users" ON public.app_users FOR ALL USING (true) WITH CHECK (true);
+
+-- Insert Default Admin User (Credentials: admin / admin123)
+INSERT INTO public.app_users (username, password_hash, full_name, role)
+VALUES ('admin', 'admin123', 'Administrator', 'admin')
+ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;
+
+-- 2. Create Catalog Items Table
 CREATE TABLE IF NOT EXISTS public.catalog_items (
   id TEXT PRIMARY KEY,
   item_code TEXT NOT NULL,
@@ -65,7 +91,7 @@ CREATE TABLE IF NOT EXISTS public.catalog_items (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
--- 2. Create Saved Barcodes Table
+-- 3. Create Saved Barcodes Table
 CREATE TABLE IF NOT EXISTS public.saved_barcodes (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -76,7 +102,7 @@ CREATE TABLE IF NOT EXISTS public.saved_barcodes (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
--- 3. Enable Row Level Security (RLS) & Public Policies for Demo Access
+-- 4. Enable Row Level Security (RLS) & Public Policies for Demo Access
 ALTER TABLE public.catalog_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saved_barcodes ENABLE ROW LEVEL SECURITY;
 

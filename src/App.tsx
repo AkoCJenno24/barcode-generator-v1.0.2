@@ -8,6 +8,9 @@ import { HistoryDrawer } from './components/HistoryDrawer';
 import { CatalogModal } from './components/CatalogModal';
 import { SupabaseSyncModal } from './components/SupabaseSyncModal';
 import { ReportsModal, ReportType } from './components/ReportsModal';
+import { LoginPage } from './components/LoginPage';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { getSavedAuthUser, clearAuthUserSession, UserAccount } from './lib/authService';
 import { downloadAllItemsExcel } from './utils/excelUtils';
 import { ToastNotification, ToastData } from './components/ToastNotification';
 import { DEFAULT_CATALOG_ITEMS } from './data/catalog';
@@ -63,6 +66,7 @@ const DEFAULT_OPTIONS: BarcodeOptions = {
 };
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
   const [itemBatch, setItemBatch] = useState<string>(INITIAL_BATCH);
@@ -76,18 +80,12 @@ export default function App() {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [isSupabaseOpen, setIsSupabaseOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [activeReportTab, setActiveReportTab] = useState<ReportType>('new_enlisted');
 
-  // Clear localStorage and load items directly from Supabase on mount
+  // Load items directly from Supabase on mount
   useEffect(() => {
     let isMounted = true;
-
-    try {
-      localStorage.clear();
-      console.log('Cleared all items in localStorage as requested.');
-    } catch (e) {
-      console.warn('Could not clear localStorage:', e);
-    }
 
     const initializeData = async () => {
       try {
@@ -472,6 +470,10 @@ export default function App() {
     setHistory((prev) => prev.filter((item) => item.id !== id));
   };
 
+  if (!currentUser) {
+    return <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />;
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 select-none">
@@ -515,6 +517,12 @@ export default function App() {
         }}
         historyCount={history.length}
         catalogCount={catalogItems.length}
+        currentUser={currentUser}
+        onLogout={() => {
+          clearAuthUserSession();
+          setCurrentUser(null);
+        }}
+        onOpenChangePassword={() => setIsChangePasswordOpen(true)}
       />
 
       {/* Main Single-View Canvas */}
@@ -608,6 +616,22 @@ export default function App() {
         defaultReportTab={activeReportTab}
         onDeletePriceUpdate={handleRevertPriceUpdate}
       />
+
+      {currentUser && (
+        <ChangePasswordModal
+          isOpen={isChangePasswordOpen}
+          onClose={() => setIsChangePasswordOpen(false)}
+          currentUser={currentUser}
+          onSuccessToast={(msg) =>
+            setToast({
+              id: Date.now(),
+              title: 'Account Security',
+              message: msg,
+              type: 'success',
+            })
+          }
+        />
+      )}
 
       {/* Floating Notification Toast */}
       <ToastNotification

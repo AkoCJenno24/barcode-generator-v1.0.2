@@ -1,37 +1,47 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Barcode, Printer, History, Package, Database, BarChart3, ChevronDown, FileText, Tag, FileSpreadsheet } from 'lucide-react';
+import { Barcode, Printer, Package, Database, BarChart3, ChevronDown, FileText, Tag, FileSpreadsheet, User, LogOut, KeyRound, ShieldCheck } from 'lucide-react';
 import { ReportType } from './ReportsModal';
+import { UserAccount } from '../lib/authService';
 
 interface HeaderProps {
   onPrint: () => void;
   onOpenBatch?: () => void;
-  onOpenHistory: () => void;
+  onOpenHistory?: () => void;
   onOpenCatalog: () => void;
   onOpenSupabase: () => void;
   onOpenReports: (reportType?: ReportType) => void;
   onDownloadAllItemsExcel: () => void;
-  historyCount: number;
+  historyCount?: number;
   catalogCount: number;
+  currentUser?: UserAccount | null;
+  onLogout?: () => void;
+  onOpenChangePassword?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onPrint,
-  onOpenHistory,
   onOpenCatalog,
   onOpenSupabase,
   onOpenReports,
   onDownloadAllItemsExcel,
-  historyCount,
   catalogCount,
+  currentUser,
+  onLogout,
+  onOpenChangePassword,
 }) => {
   const [isReportsMenuOpen, setIsReportsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const reportsMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close reports dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (reportsMenuRef.current && !reportsMenuRef.current.contains(event.target as Node)) {
         setIsReportsMenuOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -174,19 +184,76 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Print</span>
           </button>
 
-          <button
-            type="button"
-            onClick={onOpenHistory}
-            className="relative inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-            title="Saved barcode history"
-          >
-            <History className="w-4 h-4" />
-            {historyCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
-                {historyCount > 9 ? '9+' : historyCount}
-              </span>
-            )}
-          </button>
+          {/* User Profile & Account Dropdown */}
+          {currentUser && (
+            <div className="relative pl-2 border-l border-slate-200" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                className="inline-flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-xl text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 transition-all cursor-pointer shadow-2xs hover:shadow-xs group"
+                title="Account menu & password settings"
+              >
+                {/* Default Avatar Circle */}
+                <div className="relative flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-indigo-400 text-white text-[11px] font-extrabold uppercase shadow-2xs shrink-0 ring-1 ring-indigo-300/50">
+                  {currentUser.username.charAt(0).toUpperCase()}
+                  <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-white rounded-full" />
+                </div>
+                <span className="max-w-[90px] truncate text-slate-800 font-bold group-hover:text-indigo-600 transition-colors">
+                  {currentUser.username}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* User Menu Dropdown */}
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+                  {/* Account Summary Header */}
+                  <div className="px-3.5 py-2.5 border-b border-slate-100 flex items-center gap-2.5 bg-slate-50/50">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
+                      {currentUser.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate">
+                        {currentUser.fullName || currentUser.username}
+                      </p>
+                      <p className="text-[10px] text-indigo-600 font-semibold uppercase tracking-wider flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3" /> {currentUser.role || 'Admin'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Menu Options */}
+                  <div className="p-1 space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        if (onOpenChangePassword) onOpenChangePassword();
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50/70 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <KeyRound className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <span>Change Password</span>
+                    </button>
+
+                    {onLogout && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onLogout();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4 text-rose-500 shrink-0" />
+                        <span>Log Out</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </header>
